@@ -79,9 +79,7 @@ class MailchimpCampanha:
               AND (
                 tipo = 'MOR' OR fonte IN ('SITE', 'ZAP_IMOVEIS')
               )
-              AND DATE(bitrix_data) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
               AND mkt_produto REGEXP '[0-9]'
-              AND email = 'edio.ferreira@icloud.com';
             """
 
             cursor.execute(query)
