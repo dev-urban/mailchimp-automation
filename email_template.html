@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no" />
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    /* Reset CSS */
+    body, table, td, p, a, li {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    body {
+      font-family: 'Cormorant Garamond', 'Georgia', 'Times New Roman', serif;
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #f8f6f3 !important; 
+      width: 100% !important;
+      height: 100% !important;
+    }
+    /* Gmail fix */
+    u + .body a {
+      color: inherit;
+      text-decoration: none;
+      font-size: inherit;
+      font-family: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+    }
+    .container {
+      width: 600px;
+      margin: 0 auto;
+      padding: 0;
+      background-color: #ffffff !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .header {
+      text-align: center;
+      padding: 50px 15px;
+      background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+      border-bottom: 4px solid #c5a05f;
+    }
+    .header h1 {
+      color: #c5a05f;
+      font-size: 36px;
+      margin: 0;
+      font-weight: 400;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-family: 'Cormorant Garamond', serif;
+    }
+    .header-subtitle {
+      color: #ffffff;
+      font-size: 14px;
+      margin: 10px 0 0 0;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 300;
+    }
+    .intro {
+      padding: 40px 15px;
+      text-align: center;
+      background-color: #fafafa;
+    }
+    .intro p {
+      font-size: 16px;
+      color: #4a4a4a;
+      line-height: 1.8;
+      margin: 10px 0;
+      font-family: 'Lato', 'Helvetica', sans-serif;
+    }
+    .intro p strong {
+      color: #2c2c2c;
+      font-weight: 600;
+    }
+    .property-card {
+      background: #ffffff;
+      border: 1px solid #e8e5e0;
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+    }
+    table {
+      border-collapse: collapse !important;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    
+    img {
+      border: 0;
+      height: auto;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+    a {
+      color: #c5a05f;
+      text-decoration: none;
+    }
+    .property-image {
+      width: 100%;
+      height: 200px;
+      display: block;
+      object-fit: cover;
+    }
+    .property-title {
+      font-size: 19px;
+      font-weight: 600;
+      color: #2c2c2c;
+      margin: 0;
+      padding: 0 0 16px 0;
+      line-height: 1.4;
+      font-family: 'Lato', sans-serif;
+      height: 90px;
+      min-height: 90px;
+      max-height: 90px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+    .property-detail-item {
+      font-size: 13px;
+      color: #666;
+      padding: 8px 0;
+      font-family: 'Lato', sans-serif;
+      letter-spacing: 0.5px;
+    }
+    .property-price {
+      font-size: 26px;
+      font-weight: 400;
+      color: #c5a05f;
+      padding: 20px 0;
+      font-family: 'Cormorant Garamond', serif;
+      letter-spacing: 1px;
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 14px 36px;
+      background: #c5a05f;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.3s ease;
+      font-family: 'Lato', sans-serif;
+      border: 2px solid #c5a05f;
+    }
+    .btn-primary:hover {
+      background: #2c2c2c;
+      border-color: #2c2c2c;
+    }
+    .divider {
+      height: 2px;
+      background: linear-gradient(to right, transparent, #c5a05f, transparent);
+      margin: 30px auto;
+      width: 80%;
+    }
+    .footer {
+      text-align: center;
+      padding: 40px 15px;
+      background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+      border-top: 4px solid #c5a05f;
+    }
+    .footer p {
+      font-size: 13px;
+      color: #c5a05f;
+      margin: 8px 0;
+      font-family: 'Lato', sans-serif;
+      letter-spacing: 1px;
+    }
+    .footer p strong {
+      color: #ffffff;
+      font-weight: 600;
+    }
+    @media only screen and (max-width: 600px){
+      .responsive-column {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 12px !important;
+      }
+      .container {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+      }
+      .property-image {
+        height: 400px !important;
+      }
+      .property-card {
+        min-height: auto !important;
+      }
+      .header {
+        padding: 30px 10px !important;
+      }
+      .header h1 {
+        font-size: 32px !important;
+        letter-spacing: 1px;
+      }
+      .header-subtitle {
+        font-size: 18px !important;
+      }
+      .intro {
+        padding: 30px 15px !important;
+      }
+      .intro p {
+        font-size: 20px !important;
+      }
+      .footer {
+        padding: 30px 15px !important;
+      }
+      .divider {
+        width: 95% !important;
+        margin: 20px auto !important;
+      }
+      .property-title {
+        font-size: 24px !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+      }
+      .property-detail-item {
+        font-size: 18px !important;
+        padding: 10px 0 !important;
+      }
+      .property-price {
+        font-size: 32px !important;
+      }
+      .btn-primary {
+        font-size: 16px !important;
+        padding: 18px 40px !important;
+      }
+      .footer p {
+        font-size: 16px !important;
+      }
+      table[class="property-card"] {
+        min-height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      table[role="presentation"] {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
+  </style>
+</head>
+<body class="body" style="margin:0;padding:0;background-color:#f8f6f3;width:100%;height:100%;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0;padding:0;background-color:#f8f6f3;">
+    <tr>
+      <td align="center" style="padding:0;">
+        <table class="container" role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:0;">
+    <!-- Header -->
+    <table class="header" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);border-bottom:4px solid #c5a05f;">
+      <tr>
+        <td align="center" style="padding:50px 20px 40px 20px;">
+          <img src="https://i.ibb.co/nN4Pr0px/select-logo.png" alt="Urban Select" style="height:20px;display:inline-block;">
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:0 20px;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td class="divider" style="height:2px;background:linear-gradient(to right, transparent, #c5a05f, transparent);"></td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:30px 20px 0 20px;">
+          <h1 style="color:#c5a05f;font-size:36px;margin:0;font-weight:400;letter-spacing:2px;text-transform:uppercase;font-family:'Cormorant Garamond',serif;">Seu Novo Lar ESTÁ AQUI!</h1>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:10px 20px 30px 20px;">
+          <p class="header-subtitle" style="color:#ffffff;font-size:14px;margin:0;letter-spacing:3px;text-transform:uppercase;font-weight:300;">Seleção Exclusiva</p>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Intro -->
+    <table class="intro" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#fafafa;">
+      <tr>
+        <td align="center" style="padding:40px 20px 0 20px;">
+          <p style="font-size:18px !important;color:#4a4a4a;line-height:1.8;margin:10px 0;font-family:'Lato','Helvetica',sans-serif;"><strong style="color:#2c2c2c;font-weight:600;">Olá, *|FNAME|*</strong></p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:0 20px 40px 20px;">
+          <p style="font-size:18px !important;color:#4a4a4a;line-height:1.8;margin:10px 0;font-family:'Lato','Helvetica',sans-serif;">Preparamos uma seleção especial de imóveis que atendem aos seus critérios de excelência. Cada imóvel foi cuidadosamente selecionado pensando no seu estilo de vida.</p>
+        </td>
+      </tr>
+    </table>
+
+    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td class="divider" style="height:2px;background:linear-gradient(to right, transparent, #c5a05f, transparent);margin:30px auto;width:80%;"></td>
+      </tr>
+    </table>
+
+    <!-- Property Grid -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;width:100%;max-width:600px;">
+      *|IF:IM1_COD|*
+      <tr>
+        <td align="center" width="50%" class="responsive-column" style="padding:16px 20px;vertical-align:top;">
+          <table class="property-card" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:100%;min-height:550px;">
+            <tr>
+              <td>
+                <a href="https://www.urban.imb.br/imovel/*|IM1_COD|*/email/" target="_blank">
+                  <img src="*|IM1_FOTO|*" alt="*|IM1_TITULO|*" class="property-image" style="width:100%;height:200px;display:block;object-fit:cover;">
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;background:#ffffff;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td class="property-title" style="font-size:22px !important;font-weight:600;color:#2c2c2c;padding:0 0 16px 0;line-height:1.4;height:90px;min-height:90px;max-height:90px;overflow:hidden;mso-line-height-rule:exactly;">
+                      *|IM1_TITULO|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 0;border-top:1px solid #e8e5e0;border-bottom:1px solid #e8e5e0;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM1_DORM|* Dormitório(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM1_BANH|* Banheiro(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM1_VAGAS|* Vaga(s)
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-price" style="font-size:30px !important;font-weight:400;color:#c5a05f;padding:20px 0;">
+                      R$ *|IM1_VALOR|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top:10px;">
+                      <a href="https://www.urban.imb.br/imovel/*|IM1_COD|*/email/" target="_blank" class="btn-primary" style="display:inline-block;padding:16px 40px !important;background:#c5a05f;color:#ffffff !important;text-decoration:none;font-size:15px !important;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Conhecer Imóvel</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+        *|END:IF|*
+
+        *|IF:IM2_COD|*
+        <td align="center" width="50%" class="responsive-column" style="padding:16px 20px;vertical-align:top;">
+          <table class="property-card" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:100%;min-height:550px;">
+            <tr>
+              <td>
+                <a href="https://www.urban.imb.br/imovel/*|IM2_COD|*/email/" target="_blank">
+                  <img src="*|IM2_FOTO|*" alt="*|IM2_TITULO|*" class="property-image" style="width:100%;height:200px;display:block;object-fit:cover;">
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;background:#ffffff;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td class="property-title" style="font-size:22px !important;font-weight:600;color:#2c2c2c;padding:0 0 16px 0;line-height:1.4;height:90px;min-height:90px;max-height:90px;overflow:hidden;mso-line-height-rule:exactly;">
+                      *|IM2_TITULO|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 0;border-top:1px solid #e8e5e0;border-bottom:1px solid #e8e5e0;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM2_DORM|* Dormitório(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM2_BANH|* Banheiro(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM2_VAGAS|* Vaga(s)
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-price" style="font-size:30px !important;font-weight:400;color:#c5a05f;padding:20px 0;">
+                      R$ *|IM2_VALOR|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top:10px;">
+                      <a href="https://www.urban.imb.br/imovel/*|IM2_COD|*/email/" target="_blank" class="btn-primary" style="display:inline-block;padding:16px 40px !important;background:#c5a05f;color:#ffffff !important;text-decoration:none;font-size:15px !important;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Conhecer Imóvel</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      *|END:IF|*
+
+      *|IF:IM3_COD|*
+      <tr>
+        <td align="center" width="50%" class="responsive-column" style="padding:16px 20px;vertical-align:top;">
+          <table class="property-card" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:100%;min-height:550px;">
+            <tr>
+              <td>
+                <a href="https://www.urban.imb.br/imovel/*|IM3_COD|*/email/" target="_blank">
+                  <img src="*|IM3_FOTO|*" alt="*|IM3_TITULO|*" class="property-image" style="width:100%;height:200px;display:block;object-fit:cover;">
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;background:#ffffff;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td class="property-title" style="font-size:22px !important;font-weight:600;color:#2c2c2c;padding:0 0 16px 0;line-height:1.4;height:90px;min-height:90px;max-height:90px;overflow:hidden;mso-line-height-rule:exactly;">
+                      *|IM3_TITULO|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 0;border-top:1px solid #e8e5e0;border-bottom:1px solid #e8e5e0;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM3_DORM|* Dormitório(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM3_BANH|* Banheiro(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM3_VAGAS|* Vaga(s)
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-price" style="font-size:30px !important;font-weight:400;color:#c5a05f;padding:20px 0;">
+                      R$ *|IM3_VALOR|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top:10px;">
+                      <a href="https://www.urban.imb.br/imovel/*|IM3_COD|*/email/" target="_blank" class="btn-primary" style="display:inline-block;padding:16px 40px !important;background:#c5a05f;color:#ffffff !important;text-decoration:none;font-size:15px !important;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Conhecer Imóvel</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+        *|END:IF|*
+
+        *|IF:IM4_COD|*
+        <td align="center" width="50%" class="responsive-column" style="padding:16px 20px;vertical-align:top;">
+          <table class="property-card" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:100%;min-height:550px;">
+            <tr>
+              <td>
+                <a href="https://www.urban.imb.br/imovel/*|IM4_COD|*/email/" target="_blank">
+                  <img src="*|IM4_FOTO|*" alt="*|IM4_TITULO|*" class="property-image" style="width:100%;height:200px;display:block;object-fit:cover;">
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px;background:#ffffff;">
+                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td class="property-title" style="font-size:22px !important;font-weight:600;color:#2c2c2c;padding:0 0 16px 0;line-height:1.4;height:90px;min-height:90px;max-height:90px;overflow:hidden;mso-line-height-rule:exactly;">
+                      *|IM4_TITULO|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 0;border-top:1px solid #e8e5e0;border-bottom:1px solid #e8e5e0;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM4_DORM|* Dormitório(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM4_BANH|* Banheiro(s)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="property-detail-item" style="font-size:16px !important;color:#666;padding:8px 0;">
+                            ◆ *|IM4_VAGAS|* Vaga(s)
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-price" style="font-size:30px !important;font-weight:400;color:#c5a05f;padding:20px 0;">
+                      R$ *|IM4_VALOR|*
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding-top:10px;">
+                      <a href="https://www.urban.imb.br/imovel/*|IM4_COD|*/email/" target="_blank" class="btn-primary" style="display:inline-block;padding:16px 40px !important;background:#c5a05f;color:#ffffff !important;text-decoration:none;font-size:15px !important;font-weight:600;letter-spacing:2px;text-transform:uppercase;">Conhecer Imóvel</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      *|END:IF|*
+    </table>
+
+    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td class="divider" style="height:2px;background:linear-gradient(to right, transparent, #c5a05f, transparent);margin:30px auto;width:80%;"></td>
+      </tr>
+    </table>
+
+    <!-- Footer -->
+    <table class="footer" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);border-top:4px solid #c5a05f;">
+      <tr>
+        <td align="center" style="padding:40px 20px 25px 20px;">
+          <img src="https://i.ibb.co/BH4cgSSV/select-isologo.png" alt="Urban Select" style="height:40px;display:inline-block;">
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:0 20px 20px 20px;">
+          <a href="https://urban.imb.br" target="_blank" style="color:#c5a05f;text-decoration:none;margin:0 15px;font-size:13px;letter-spacing:1px;display:inline-flex;align-items:center;gap:6px;">
+            <img src="https://i.ibb.co/qLzDT7c6/globe.png" alt="Website" style="width:18px;height:18px;vertical-align:middle;">
+            urban.imb.br
+          </a>
+          <a href="https://www.instagram.com/urban_sellect/" target="_blank" style="color:#c5a05f;text-decoration:none;margin:0 15px;font-size:13px;letter-spacing:1px;display:inline-flex;align-items:center;gap:6px;">
+            <img src="https://i.ibb.co/4RFMhrBC/instagram.png" alt="Instagram" style="width:18px;height:18px;vertical-align:middle;">
+            @urban_sellect
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:0 20px;">
+          <p style="font-size:13px;color:#c5a05f;margin:8px 0;font-family:'Lato',sans-serif;letter-spacing:1px;">Estamos à disposição para qualquer esclarecimento.</p>
+        </td>
+      </tr>
+      <tr>
+        <td align="center" style="padding:0 20px 40px 20px;">
+          <p style="font-size:13px;color:#c5a05f;margin:8px 0;font-family:'Lato',sans-serif;letter-spacing:1px;"><strong style="color:#ffffff;font-weight:600;">Urban Select</strong> • Excelência em Imóveis</p>
+        </td>
+      </tr>
+    </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
