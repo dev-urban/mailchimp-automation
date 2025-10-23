@@ -168,7 +168,7 @@ class MailchimpCampanha:
                 logger.info(f"Buscando imóveis semelhantes por localização (3km) para {imovel['Codigo']}")
 
                 # Fórmula de Haversine para calcular distância em km
-                # 3km de raio, área ±20%, valor ±20%
+                # 3km de raio, área ±35%, valor ±35%
                 query = """
                 SELECT tb_imoveis.*,
                        (6371 * acos(
@@ -181,8 +181,8 @@ class MailchimpCampanha:
                 FROM tb_imoveis
                 INNER JOIN agenciamentos a ON tb_imoveis.Codigo = a.codigo_imovel
                 WHERE tb_imoveis.Dormitorios = %s
-                  AND tb_imoveis.AreaPrivativa BETWEEN (%s * 0.8) AND (%s * 1.2)
-                  AND tb_imoveis.ValorVenda BETWEEN (%s * 0.8) AND (%s * 1.2)
+                  AND tb_imoveis.AreaPrivativa BETWEEN (%s * 0.65) AND (%s * 1.35)
+                  AND tb_imoveis.ValorVenda BETWEEN (%s * 0.65) AND (%s * 1.35)
                   AND tb_imoveis.Codigo != %s
                   AND tb_imoveis.Foto IS NOT NULL
                   AND tb_imoveis.TituloSite IS NOT NULL
@@ -208,8 +208,8 @@ class MailchimpCampanha:
                 SELECT *
                 FROM tb_imoveis
                 WHERE Dormitorios = %s
-                  AND AreaPrivativa BETWEEN (%s * 0.8) AND (%s * 1.2)
-                  AND ValorVenda BETWEEN (%s * 0.8) AND (%s * 1.2)
+                  AND AreaPrivativa BETWEEN (%s * 0.65) AND (%s * 1.35)
+                  AND ValorVenda BETWEEN (%s * 0.65) AND (%s * 1.35)
                   AND BairroComercial = %s
                   AND Codigo != %s
                   AND Foto IS NOT NULL
