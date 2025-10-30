@@ -12,6 +12,7 @@ from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from math import radians, cos, sin, acos
 import threading
+import json
 import mysql.connector
 from mysql.connector import Error
 import mailchimp_marketing as MailchimpMarketing
@@ -431,8 +432,24 @@ class MailchimpCampanha:
                     "status": "subscribed",
                     "merge_fields": merge_fields
                 }
-                self.mailchimp_client.lists.add_list_member(self.list_id, member_data)
-                logger.info(f"Contato criado: {lead['email']}")
+                try:
+                    self.mailchimp_client.lists.add_list_member(self.list_id, member_data)
+                    logger.info(f"Contato criado: {lead['email']}")
+                except ApiClientError as e:
+                    # Se já existir (ex.: arquivado), faz update para reativar/atualizar
+                    try:
+                        detail = json.loads(getattr(e, 'text', '{}'))
+                    except Exception:
+                        detail = {}
+                    if detail.get('title') == 'Member Exists' or detail.get('status') == 400:
+                        self.mailchimp_client.lists.update_list_member(
+                            self.list_id,
+                            subscriber_hash,
+                            {"status": "subscribed", "merge_fields": merge_fields}
+                        )
+                        logger.info(f"Contato reativado/atualizado: {lead['email']}")
+                    else:
+                        raise
             else:
                 self.mailchimp_client.lists.update_list_member(
                     self.list_id,
