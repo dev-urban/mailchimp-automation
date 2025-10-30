@@ -9,6 +9,9 @@ import logging
 import hashlib
 from datetime import datetime
 from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from math import radians, cos, sin, acos
+import threading
 import mysql.connector
 from mysql.connector import Error
 import mailchimp_marketing as MailchimpMarketing
@@ -63,6 +66,73 @@ class MailchimpCampanha:
 
         self.list_id = os.getenv('MAILCHIMP_LIST_ID')
 
+        # Caches e controle de concorrência
+        self._imoveis_by_codigo: Dict[str, Dict] = {}
+        self._imoveis_list: List[Dict] = []
+        self._coords_by_codigo: Dict[str, tuple] = {}
+        self._semelhantes_cache: Dict[str, List[Dict]] = {}
+        self._cache_lock = threading.Lock()
+        self.max_workers = int(os.getenv('WORKERS', '6'))
+
+    def load_all_imoveis(self):
+        """Carrega todos os imóveis em memória (uma vez)."""
+        if self._imoveis_list:
+            return
+        connection = None
+        try:
+            connection = mysql.connector.connect(**self.db_imoveis_config)
+            cursor = connection.cursor(dictionary=True)
+            query = (
+                """
+                SELECT Codigo, Dormitorios, AreaPrivativa, ValorVenda,
+                       Foto, TituloSite, Endereco, BairroComercial
+                FROM tb_imoveis
+                """
+            )
+            cursor.execute(query)
+            rows = cursor.fetchall() or []
+            with self._cache_lock:
+                self._imoveis_list = rows
+                self._imoveis_by_codigo = {str(r['Codigo']): r for r in rows}
+            logger.info(f"Imóveis carregados em cache: {len(rows)}")
+        except Error as e:
+            logger.error(f"Erro ao carregar imóveis: {e}")
+        finally:
+            if connection and connection.is_connected():
+                cursor.close()
+                connection.close()
+
+    def load_all_coordenadas(self):
+        """Carrega todas as coordenadas de agenciamentos (banco de Leads)."""
+        if self._coords_by_codigo:
+            return
+        connection = None
+        try:
+            connection = mysql.connector.connect(**self.db_config)
+            cursor = connection.cursor(dictionary=True)
+            query = (
+                """
+                SELECT codigo_imovel, latitude, longitude
+                FROM agenciamentos
+                WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                """
+            )
+            cursor.execute(query)
+            rows = cursor.fetchall() or []
+            with self._cache_lock:
+                self._coords_by_codigo = {
+                    str(r['codigo_imovel']): (r['latitude'], r['longitude'])
+                    for r in rows
+                    if r.get('latitude') is not None and r.get('longitude') is not None
+                }
+            logger.info(f"Coordenadas carregadas em cache: {len(self._coords_by_codigo)}")
+        except Error as e:
+            logger.error(f"Erro ao carregar coordenadas: {e}")
+        finally:
+            if connection and connection.is_connected():
+                cursor.close()
+                connection.close()
+
     def get_leads_from_database(self) -> List[Dict]:
         """Busca leads do banco de dados"""
         connection = None
@@ -98,144 +168,102 @@ class MailchimpCampanha:
                 connection.close()
 
     def get_imovel_data(self, codigo: str) -> Dict:
-        """Busca dados do imóvel"""
-        connection = None
-        try:
-            connection = mysql.connector.connect(**self.db_imoveis_config)
-            cursor = connection.cursor(dictionary=True)
-
-            query = """
-            SELECT *
-            FROM tb_imoveis
-            WHERE Codigo = %s;
-            """
-
-            cursor.execute(query, (codigo,))
-            return cursor.fetchone()
-
-        except Error as e:
-            logger.error(f"Erro ao buscar imóvel {codigo}: {e}")
-            return None
-
-        finally:
-            if connection and connection.is_connected():
-                cursor.close()
-                connection.close()
+        """Busca dados do imóvel a partir do cache (carregado uma vez)."""
+        if not self._imoveis_by_codigo:
+            self.load_all_imoveis()
+        return self._imoveis_by_codigo.get(str(codigo))
 
     def get_coordenadas_imovel(self, codigo: str) -> tuple:
-        """Busca latitude e longitude do imóvel na tabela agenciamentos do banco Leads"""
-        connection = None
-        try:
-            connection = mysql.connector.connect(**self.db_config)  # Banco de Leads
-            cursor = connection.cursor(dictionary=True)
-
-            query = """
-            SELECT latitude, longitude
-            FROM agenciamentos
-            WHERE codigo_imovel = %s
-            LIMIT 1;
-            """
-
-            cursor.execute(query, (codigo,))
-            result = cursor.fetchone()
-
-            if result and result.get('latitude') and result.get('longitude'):
-                return (result['latitude'], result['longitude'])
-
-            return (None, None)
-
-        except Error as e:
-            logger.error(f"Erro ao buscar coordenadas do imóvel {codigo}: {e}")
-            return (None, None)
-
-        finally:
-            if connection and connection.is_connected():
-                cursor.close()
-                connection.close()
+        """Obtém coordenadas a partir do cache."""
+        if not self._coords_by_codigo:
+            self.load_all_coordenadas()
+        return self._coords_by_codigo.get(str(codigo), (None, None))
 
     def get_imoveis_semelhantes(self, imovel: Dict) -> List[Dict]:
-        """Busca imóveis semelhantes usando raio de 3km (latitude/longitude) ou BairroComercial como fallback"""
-        connection = None
+        """Busca imóveis semelhantes a partir dos caches (sem JOIN entre bancos)."""
+        codigo_key = str(imovel['Codigo'])
+        # Cache por código de origem
+        if codigo_key in self._semelhantes_cache:
+            return self._semelhantes_cache[codigo_key]
+
+        if not self._imoveis_list:
+            self.load_all_imoveis()
+        if not self._coords_by_codigo:
+            self.load_all_coordenadas()
+
         try:
-            # Busca coordenadas do imóvel principal
-            lat_origem, lon_origem = self.get_coordenadas_imovel(imovel['Codigo'])
+            lat_origem, lon_origem = self.get_coordenadas_imovel(codigo_key)
+            alvo_dorm = imovel.get('Dormitorios')
+            alvo_area = imovel.get('AreaPrivativa')
+            alvo_valor = imovel.get('ValorVenda')
 
-            connection = mysql.connector.connect(**self.db_imoveis_config)
-            cursor = connection.cursor(dictionary=True)
-
-            # Se tiver coordenadas, usa raio de 3km
+            candidatos: List[Dict] = []
             if lat_origem and lon_origem:
-                logger.info(f"Buscando imóveis semelhantes por localização (3km) para {imovel['Codigo']}")
+                logger.info(f"Buscando imóveis semelhantes por localização (3km) para {codigo_key}")
 
-                # Fórmula de Haversine para calcular distância em km
-                # 3km de raio, área ±35%, valor ±35%
-                query = """
-                SELECT tb_imoveis.*,
-                       (6371 * acos(
-                           cos(radians(%s)) *
-                           cos(radians(a.latitude)) *
-                           cos(radians(a.longitude) - radians(%s)) +
-                           sin(radians(%s)) *
-                           sin(radians(a.latitude))
-                       )) AS distancia
-                FROM tb_imoveis
-                INNER JOIN agenciamentos a ON tb_imoveis.Codigo = a.codigo_imovel
-                WHERE tb_imoveis.Dormitorios = %s
-                  AND tb_imoveis.AreaPrivativa BETWEEN (%s * 0.65) AND (%s * 1.35)
-                  AND tb_imoveis.ValorVenda BETWEEN (%s * 0.65) AND (%s * 1.35)
-                  AND tb_imoveis.Codigo != %s
-                  AND tb_imoveis.Foto IS NOT NULL
-                  AND tb_imoveis.TituloSite IS NOT NULL
-                  AND a.latitude IS NOT NULL
-                  AND a.longitude IS NOT NULL
-                HAVING distancia <= 3
-                ORDER BY distancia ASC
-                LIMIT 4;
-                """
+                lat_r = radians(lat_origem)
+                lon_r = radians(lon_origem)
 
-                params = (
-                    lat_origem, lon_origem, lat_origem,  # Para Haversine
-                    imovel['Dormitorios'],
-                    imovel['AreaPrivativa'], imovel['AreaPrivativa'],
-                    imovel['ValorVenda'], imovel['ValorVenda'],
-                    imovel['Codigo']
-                )
+                for cand in self._imoveis_list:
+                    if str(cand['Codigo']) == codigo_key:
+                        continue
+                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                        continue
+                    if cand.get('Dormitorios') != alvo_dorm:
+                        continue
+                    area_c = cand.get('AreaPrivativa')
+                    valor_c = cand.get('ValorVenda')
+                    if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
+                        continue
+                    if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
+                        continue
+                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                        continue
+                    coord = self._coords_by_codigo.get(str(cand['Codigo']))
+                    if not coord:
+                        continue
+                    lat_c, lon_c = coord
+                    # Distância via fórmula do cosseno esférico (como no SQL)
+                    d = 6371 * acos(
+                        cos(lat_r) * cos(radians(lat_c)) * cos(radians(lon_c) - lon_r) +
+                        sin(lat_r) * sin(radians(lat_c))
+                    )
+                    if d <= 3:
+                        item = dict(cand)
+                        item['distancia'] = d
+                        candidatos.append(item)
+
+                candidatos.sort(key=lambda x: x.get('distancia', 9999))
+                semelhantes = candidatos[:4]
             else:
-                # Fallback: usa BairroComercial
-                logger.warning(f"Imóvel {imovel['Codigo']} sem coordenadas, usando BairroComercial como fallback")
+                logger.warning(f"Imóvel {codigo_key} sem coordenadas, usando BairroComercial como fallback")
+                bairro = imovel.get('BairroComercial')
+                for cand in self._imoveis_list:
+                    if str(cand['Codigo']) == codigo_key:
+                        continue
+                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                        continue
+                    if cand.get('Dormitorios') != alvo_dorm:
+                        continue
+                    area_c = cand.get('AreaPrivativa')
+                    valor_c = cand.get('ValorVenda')
+                    if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
+                        continue
+                    if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
+                        continue
+                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                        continue
+                    if cand.get('BairroComercial') != bairro:
+                        continue
+                    candidatos.append(cand)
+                semelhantes = candidatos[:4]
 
-                query = """
-                SELECT *
-                FROM tb_imoveis
-                WHERE Dormitorios = %s
-                  AND AreaPrivativa BETWEEN (%s * 0.65) AND (%s * 1.35)
-                  AND ValorVenda BETWEEN (%s * 0.65) AND (%s * 1.35)
-                  AND BairroComercial = %s
-                  AND Codigo != %s
-                  AND Foto IS NOT NULL
-                  AND TituloSite IS NOT NULL
-                LIMIT 4;
-                """
-
-                params = (
-                    imovel['Dormitorios'],
-                    imovel['AreaPrivativa'], imovel['AreaPrivativa'],
-                    imovel['ValorVenda'], imovel['ValorVenda'],
-                    imovel['BairroComercial'],
-                    imovel['Codigo']
-                )
-
-            cursor.execute(query, params)
-            return cursor.fetchall()
-
-        except Error as e:
+            with self._cache_lock:
+                self._semelhantes_cache[codigo_key] = semelhantes
+            return semelhantes
+        except Exception as e:
             logger.error(f"Erro ao buscar imóveis semelhantes: {e}")
             return []
-
-        finally:
-            if connection and connection.is_connected():
-                cursor.close()
-                connection.close()
 
     def get_tag_segment_id(self, tag_campanha: str) -> int:
         """Busca o ID do segmento que o Mailchimp criou automaticamente para a tag"""
@@ -390,16 +418,14 @@ class MailchimpCampanha:
                     merge_fields[f"IM{i+1}_BANH"] = str(banh if banh is not None else 0)[:255]
                     merge_fields[f"IM{i+1}_VAGAS"] = str(vagas if vagas is not None else 0)[:255]
 
-            # Verifica se existe
+            # Fluxo sem upsert: tenta buscar; se não existir cria; se existir atualiza
             try:
-                subscriber_hash_check = hashlib.md5(lead['email'].lower().encode()).hexdigest()
-                self.mailchimp_client.lists.get_list_member(self.list_id, subscriber_hash_check)
+                self.mailchimp_client.lists.get_list_member(self.list_id, subscriber_hash)
                 existe = True
-            except:
+            except Exception:
                 existe = False
 
             if not existe:
-                # Cria novo contato (tag será adicionada depois)
                 member_data = {
                     "email_address": lead['email'],
                     "status": "subscribed",
@@ -408,7 +434,6 @@ class MailchimpCampanha:
                 self.mailchimp_client.lists.add_list_member(self.list_id, member_data)
                 logger.info(f"Contato criado: {lead['email']}")
             else:
-                # Atualiza existente
                 self.mailchimp_client.lists.update_list_member(
                     self.list_id,
                     subscriber_hash,
@@ -441,51 +466,53 @@ class MailchimpCampanha:
         stats = {'total': len(leads), 'atualizados': 0, 'skipped': 0, 'errors': 0}
         emails_processados = []
 
-        # Para cada lead, busca imóveis semelhantes e atualiza no Mailchimp
-        for lead in leads:
-            codigo = lead.get('mkt_produto_formatado')
+        # Carrega caches antes do processamento
+        self.load_all_imoveis()
+        self.load_all_coordenadas()
 
+        # Processamento concorrente dos leads (IO-bound no Mailchimp)
+        def processar_um(lead: Dict):
+            codigo = lead.get('mkt_produto_formatado')
             if not codigo:
-                logger.warning(f"Lead {lead['email']} sem código de imóvel")
-                stats['skipped'] += 1
-                continue
+                return ('skip', lead['email'], 'Sem código')
 
             logger.info(f"Processando lead {lead['email']} - Imóvel: {codigo}")
-
-            # Busca imóvel
             imovel = self.get_imovel_data(codigo)
-
             if not imovel:
-                logger.warning(f"Imóvel {codigo} não encontrado")
-                stats['skipped'] += 1
-                continue
+                return ('skip', lead['email'], f"Imóvel {codigo} não encontrado")
 
-            # Busca semelhantes
             semelhantes = self.get_imoveis_semelhantes(imovel)
-
             if not semelhantes:
-                logger.warning(f"Sem imóveis semelhantes para {codigo}")
-                stats['skipped'] += 1
-                continue
+                return ('skip', lead['email'], f"Sem imóveis semelhantes para {codigo}")
 
-            # Atualiza campos no Mailchimp
-            if self.atualizar_campos_imoveis(lead, semelhantes):
-                stats['atualizados'] += 1
-                emails_processados.append(lead['email'])
+            ok = self.atualizar_campos_imoveis(lead, semelhantes)
+            if not ok:
+                return ('erro', lead['email'], 'Falha ao atualizar Mailchimp')
 
-                # Adiciona tag única desta campanha ao contato
-                subscriber_hash = hashlib.md5(lead['email'].lower().encode()).hexdigest()
-                try:
-                    self.mailchimp_client.lists.update_list_member_tags(
-                        self.list_id,
-                        subscriber_hash,
-                        {"tags": [{"name": tag_campanha, "status": "active"}]}
-                    )
-                    logger.info(f"Tag {tag_campanha} adicionada ao contato: {lead['email']}")
-                except ApiClientError as e:
-                    logger.error(f"Erro ao adicionar tag: {e.text}")
-            else:
-                stats['errors'] += 1
+            # Adiciona tag única desta campanha ao contato
+            subscriber_hash_local = hashlib.md5(lead['email'].lower().encode()).hexdigest()
+            try:
+                self.mailchimp_client.lists.update_list_member_tags(
+                    self.list_id,
+                    subscriber_hash_local,
+                    {"tags": [{"name": tag_campanha, "status": "active"}]}
+                )
+                return ('ok', lead['email'], 'Atualizado e tag aplicado')
+            except ApiClientError as e:
+                logger.error(f"Erro ao adicionar tag: {e.text}")
+                return ('ok', lead['email'], 'Atualizado (tag falhou)')
+
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = [executor.submit(processar_um, lead) for lead in leads]
+            for fut in as_completed(futures):
+                status, email, _ = fut.result()
+                if status == 'ok':
+                    stats['atualizados'] += 1
+                    emails_processados.append(email)
+                elif status == 'skip':
+                    stats['skipped'] += 1
+                else:
+                    stats['errors'] += 1
 
         # Log final
         logger.info("=" * 60)
