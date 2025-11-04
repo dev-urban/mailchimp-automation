@@ -198,66 +198,85 @@ class MailchimpCampanha:
             alvo_area = imovel.get('AreaPrivativa')
             alvo_valor = imovel.get('ValorVenda')
 
-            candidatos: List[Dict] = []
+            # Estratégia: tentar mesmo número de dormitórios e, se necessário, subir para +1, +2, +3.
+            if isinstance(alvo_dorm, (int, float)):
+                alvo_dorms = [int(alvo_dorm), int(alvo_dorm) + 1, int(alvo_dorm) + 2, int(alvo_dorm) + 3]
+            else:
+                alvo_dorms = [alvo_dorm]
+
             if lat_origem and lon_origem:
-                logger.info(f"Buscando imóveis semelhantes por localização (3km) para {codigo_key}")
+                logger.info(f"Buscando imóveis semelhantes por localização (5km) para {codigo_key}")
 
                 lat_r = radians(lat_origem)
                 lon_r = radians(lon_origem)
 
-                for cand in self._imoveis_list:
-                    if str(cand['Codigo']) == codigo_key:
-                        continue
-                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
-                        continue
-                    if cand.get('Dormitorios') != alvo_dorm:
-                        continue
-                    area_c = cand.get('AreaPrivativa')
-                    valor_c = cand.get('ValorVenda')
-                    if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
-                        continue
-                    if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
-                        continue
-                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
-                        continue
-                    coord = self._coords_by_codigo.get(str(cand['Codigo']))
-                    if not coord:
-                        continue
-                    lat_c, lon_c = coord
-                    # Distância via fórmula do cosseno esférico (como no SQL)
-                    d = 6371 * acos(
-                        cos(lat_r) * cos(radians(lat_c)) * cos(radians(lon_c) - lon_r) +
-                        sin(lat_r) * sin(radians(lat_c))
-                    )
-                    if d <= 3:
-                        item = dict(cand)
-                        item['distancia'] = d
-                        candidatos.append(item)
+                semelhantes: List[Dict] = []
+                for dorm_target in alvo_dorms:
+                    nivel: List[Dict] = []
+                    for cand in self._imoveis_list:
+                        if str(cand['Codigo']) == codigo_key:
+                            continue
+                        if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                            continue
+                        if cand.get('Dormitorios') != dorm_target:
+                            continue
+                        area_c = cand.get('AreaPrivativa')
+                        valor_c = cand.get('ValorVenda')
+                        if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
+                            continue
+                        if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
+                            continue
+                        if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                            continue
+                        coord = self._coords_by_codigo.get(str(cand['Codigo']))
+                        if not coord:
+                            continue
+                        lat_c, lon_c = coord
+                        # Distância via fórmula do cosseno esférico (como no SQL)
+                        d = 6371 * acos(
+                            cos(lat_r) * cos(radians(lat_c)) * cos(radians(lon_c) - lon_r) +
+                            sin(lat_r) * sin(radians(lat_c))
+                        )
+                        if d <= 5:
+                            item = dict(cand)
+                            item['distancia'] = d
+                            nivel.append(item)
 
-                candidatos.sort(key=lambda x: x.get('distancia', 9999))
-                semelhantes = candidatos[:4]
+                    nivel.sort(key=lambda x: x.get('distancia', 9999))
+                    for it in nivel:
+                        if len(semelhantes) < 4:
+                            semelhantes.append(it)
+                        else:
+                            break
+                    if len(semelhantes) >= 4:
+                        break
             else:
                 logger.warning(f"Imóvel {codigo_key} sem coordenadas, usando BairroComercial como fallback")
                 bairro = imovel.get('BairroComercial')
-                for cand in self._imoveis_list:
-                    if str(cand['Codigo']) == codigo_key:
-                        continue
-                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
-                        continue
-                    if cand.get('Dormitorios') != alvo_dorm:
-                        continue
-                    area_c = cand.get('AreaPrivativa')
-                    valor_c = cand.get('ValorVenda')
-                    if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
-                        continue
-                    if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
-                        continue
-                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
-                        continue
-                    if cand.get('BairroComercial') != bairro:
-                        continue
-                    candidatos.append(cand)
-                semelhantes = candidatos[:4]
+                semelhantes: List[Dict] = []
+                for dorm_target in alvo_dorms:
+                    for cand in self._imoveis_list:
+                        if str(cand['Codigo']) == codigo_key:
+                            continue
+                        if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                            continue
+                        if cand.get('Dormitorios') != dorm_target:
+                            continue
+                        area_c = cand.get('AreaPrivativa')
+                        valor_c = cand.get('ValorVenda')
+                        if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
+                            continue
+                        if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
+                            continue
+                        if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                            continue
+                        if cand.get('BairroComercial') != bairro:
+                            continue
+                        semelhantes.append(cand)
+                        if len(semelhantes) >= 4:
+                            break
+                    if len(semelhantes) >= 4:
+                        break
 
             with self._cache_lock:
                 self._semelhantes_cache[codigo_key] = semelhantes
