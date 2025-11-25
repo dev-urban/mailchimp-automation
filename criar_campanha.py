@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from math import radians, cos, sin, acos
 import threading
 import json
+import unicodedata
 import mysql.connector
 from mysql.connector import Error
 import mailchimp_marketing as MailchimpMarketing
@@ -33,6 +34,95 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+
+def normalize_bairro(nome: str) -> str:
+    """Normaliza nome de bairro removendo acentos e caracteres não alfanuméricos."""
+    if not nome:
+        return None
+    normalized = unicodedata.normalize('NFKD', nome)
+    normalized = ''.join(ch for ch in normalized if ch.isalnum())
+    return normalized.lower()
+
+
+BAIRRO_RAIO_MAP = {
+    "auxiliadora": [
+        "Auxiliadora", "Mont Serrat", "Bela Vista", "Moinhos de Vento",
+        "Independência", "Rio Branco", "Boa Vista"
+    ],
+    "belavista": [
+        "Bela Vista", "Mont Serrat", "Petrópolis", "Auxiliadora",
+        "Boa Vista", "Moinhos de Vento", "Chácara das Pedras"
+    ],
+    "boavista": [
+        "Boa Vista", "Bela Vista", "Mont Serrat", "Chácara das Pedras",
+        "Três Figueiras", "Petrópolis", "Passo da Areia"
+    ],
+    "bomfim": [
+        "Bom Fim", "Independência", "Rio Branco",
+        "Moinhos de Vento", "Higienópolis", "Jardim Botânico"
+    ],
+    "centralparque": [
+        "Central Parque", "Jardim do Salso", "Jardim Botânico",
+        "Petrópolis", "Partenon", "Agronomia"
+    ],
+    "centralpark": [
+        "Central Parque", "Jardim do Salso", "Jardim Botânico",
+        "Petrópolis", "Partenon", "Agronomia"
+    ],
+    "chacaradaspedras": [
+        "Chácara das Pedras", "Três Figueiras", "Boa Vista",
+        "Bela Vista", "Petrópolis", "Higienópolis"
+    ],
+    "passodareia": [
+        "Passo da Areia", "Boa Vista", "Chácara das Pedras",
+        "Cristo Redentor", "Jardim Europa"
+    ],
+    "tresfigueiras": [
+        "Três Figueiras", "Boa Vista", "Chácara das Pedras",
+        "Bela Vista", "Petrópolis", "Mont Serrat"
+    ],
+    "meninodeus": [
+        "Menino Deus", "Praia de Belas", "Santana",
+        "Azenha", "Centro Histórico", "Cidade Baixa"
+    ],
+    "higienopolis": [
+        "Higienópolis", "Petrópolis", "Moinhos de Vento",
+        "Bom Fim", "Jardim Botânico", "Santana"
+    ],
+    "independencia": [
+        "Independência", "Bom Fim", "Centro Histórico",
+        "Moinhos de Vento", "Floresta", "Rio Branco"
+    ],
+    "jardimbotanico": [
+        "Jardim Botânico", "Petrópolis", "Jardim Europa",
+        "Jardim do Salso", "Partenon", "Central Parque"
+    ],
+    "jardimeuropa": [
+        "Jardim Europa", "Chácara das Pedras", "Boa Vista",
+        "Três Figueiras", "Passo da Areia", "Petrópolis"
+    ],
+    "moinhosdevento": [
+        "Moinhos de Vento", "Bela Vista", "Mont Serrat",
+        "Independência", "Auxiliadora", "Rio Branco"
+    ],
+    "montserrat": [
+        "Mont Serrat", "Bela Vista", "Auxiliadora",
+        "Moinhos de Vento", "Boa Vista", "Petrópolis"
+    ],
+    "petropolis": [
+        "Petrópolis", "Bela Vista", "Mont Serrat",
+        "Boa Vista", "Jardim Botânico", "Três Figueiras", "Chácara das Pedras"
+    ],
+    "riobranco": [
+        "Rio Branco", "Bom Fim", "Independência",
+        "Moinhos de Vento", "Mont Serrat", "Petrópolis"
+    ],
+    "ipanema": [
+        "Ipanema", "Cavalhada", "Pedra Redonda",
+        "Tristeza", "Vila Assunção", "Jardim Isabel"
+    ],
+}
 
 
 class MailchimpCampanha:
@@ -253,6 +343,15 @@ class MailchimpCampanha:
             else:
                 logger.warning(f"Imóvel {codigo_key} sem coordenadas, usando BairroComercial como fallback")
                 bairro = imovel.get('BairroComercial')
+                bairro_norm = normalize_bairro(bairro)
+                raio_recomendado = BAIRRO_RAIO_MAP.get(bairro_norm)
+                allowed_norms = set()
+                if bairro_norm:
+                    allowed_norms.add(bairro_norm)
+                if raio_recomendado:
+                    allowed_norms.update(
+                        normalize_bairro(b) for b in raio_recomendado if normalize_bairro(b)
+                    )
                 semelhantes: List[Dict] = []
                 for dorm_target in alvo_dorms:
                     for cand in self._imoveis_list:
@@ -270,8 +369,13 @@ class MailchimpCampanha:
                             continue
                         if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
                             continue
-                        if cand.get('BairroComercial') != bairro:
-                            continue
+                        cand_bairro_norm = normalize_bairro(cand.get('BairroComercial'))
+                        if allowed_norms:
+                            if not cand_bairro_norm or cand_bairro_norm not in allowed_norms:
+                                continue
+                        else:
+                            if cand_bairro_norm != bairro_norm:
+                                continue
                         semelhantes.append(cand)
                         if len(semelhantes) >= 4:
                             break
