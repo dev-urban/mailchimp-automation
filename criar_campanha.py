@@ -284,15 +284,7 @@ class MailchimpCampanha:
 
         try:
             lat_origem, lon_origem = self.get_coordenadas_imovel(codigo_key)
-            alvo_dorm = imovel.get('Dormitorios')
-            alvo_area = imovel.get('AreaPrivativa')
             alvo_valor = imovel.get('ValorVenda')
-
-            # Estratégia: tentar mesmo número de dormitórios e, se necessário, subir para +1, +2, +3.
-            if isinstance(alvo_dorm, (int, float)):
-                alvo_dorms = [int(alvo_dorm), int(alvo_dorm) + 1, int(alvo_dorm) + 2, int(alvo_dorm) + 3]
-            else:
-                alvo_dorms = [alvo_dorm]
 
             if lat_origem and lon_origem:
                 logger.info(f"Buscando imóveis semelhantes por localização (5km) para {codigo_key}")
@@ -301,45 +293,33 @@ class MailchimpCampanha:
                 lon_r = radians(lon_origem)
 
                 semelhantes: List[Dict] = []
-                for dorm_target in alvo_dorms:
-                    nivel: List[Dict] = []
-                    for cand in self._imoveis_list:
-                        if str(cand['Codigo']) == codigo_key:
-                            continue
-                        if cand.get('Foto') is None or cand.get('TituloSite') is None:
-                            continue
-                        if cand.get('Dormitorios') != dorm_target:
-                            continue
-                        area_c = cand.get('AreaPrivativa')
-                        valor_c = cand.get('ValorVenda')
-                        if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
-                            continue
-                        if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
-                            continue
-                        if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
-                            continue
-                        coord = self._coords_by_codigo.get(str(cand['Codigo']))
-                        if not coord:
-                            continue
-                        lat_c, lon_c = coord
-                        # Distância via fórmula do cosseno esférico (como no SQL)
-                        d = 6371 * acos(
-                            cos(lat_r) * cos(radians(lat_c)) * cos(radians(lon_c) - lon_r) +
-                            sin(lat_r) * sin(radians(lat_c))
-                        )
-                        if d <= 5:
-                            item = dict(cand)
-                            item['distancia'] = d
-                            nivel.append(item)
+                nivel: List[Dict] = []
+                for cand in self._imoveis_list:
+                    if str(cand['Codigo']) == codigo_key:
+                        continue
+                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                        continue
+                    valor_c = cand.get('ValorVenda')
+                    if valor_c is None or alvo_valor is None:
+                        continue
+                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                        continue
+                    coord = self._coords_by_codigo.get(str(cand['Codigo']))
+                    if not coord:
+                        continue
+                    lat_c, lon_c = coord
+                    # Distância via fórmula do cosseno esférico (como no SQL)
+                    d = 6371 * acos(
+                        cos(lat_r) * cos(radians(lat_c)) * cos(radians(lon_c) - lon_r) +
+                        sin(lat_r) * sin(radians(lat_c))
+                    )
+                    if d <= 5:
+                        item = dict(cand)
+                        item['distancia'] = d
+                        nivel.append(item)
 
-                    nivel.sort(key=lambda x: x.get('distancia', 9999))
-                    for it in nivel:
-                        if len(semelhantes) < 4:
-                            semelhantes.append(it)
-                        else:
-                            break
-                    if len(semelhantes) >= 4:
-                        break
+                nivel.sort(key=lambda x: x.get('distancia', 9999))
+                semelhantes = nivel[:4]
             else:
                 logger.warning(f"Imóvel {codigo_key} sem coordenadas, usando BairroComercial como fallback")
                 bairro = imovel.get('BairroComercial')
@@ -353,32 +333,24 @@ class MailchimpCampanha:
                         normalize_bairro(b) for b in raio_recomendado if normalize_bairro(b)
                     )
                 semelhantes: List[Dict] = []
-                for dorm_target in alvo_dorms:
-                    for cand in self._imoveis_list:
-                        if str(cand['Codigo']) == codigo_key:
+                for cand in self._imoveis_list:
+                    if str(cand['Codigo']) == codigo_key:
+                        continue
+                    if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                        continue
+                    valor_c = cand.get('ValorVenda')
+                    if valor_c is None or alvo_valor is None:
+                        continue
+                    if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
+                        continue
+                    cand_bairro_norm = normalize_bairro(cand.get('BairroComercial'))
+                    if allowed_norms:
+                        if not cand_bairro_norm or cand_bairro_norm not in allowed_norms:
                             continue
-                        if cand.get('Foto') is None or cand.get('TituloSite') is None:
+                    else:
+                        if cand_bairro_norm != bairro_norm:
                             continue
-                        if cand.get('Dormitorios') != dorm_target:
-                            continue
-                        area_c = cand.get('AreaPrivativa')
-                        valor_c = cand.get('ValorVenda')
-                        if area_c is None or valor_c is None or alvo_area is None or alvo_valor is None:
-                            continue
-                        if not (alvo_area * 0.65 <= area_c <= alvo_area * 1.35):
-                            continue
-                        if not (alvo_valor * 0.65 <= valor_c <= alvo_valor * 1.35):
-                            continue
-                        cand_bairro_norm = normalize_bairro(cand.get('BairroComercial'))
-                        if allowed_norms:
-                            if not cand_bairro_norm or cand_bairro_norm not in allowed_norms:
-                                continue
-                        else:
-                            if cand_bairro_norm != bairro_norm:
-                                continue
-                        semelhantes.append(cand)
-                        if len(semelhantes) >= 4:
-                            break
+                    semelhantes.append(cand)
                     if len(semelhantes) >= 4:
                         break
 
